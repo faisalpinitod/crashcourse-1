@@ -1,15 +1,20 @@
-const express = require("express");
-const mongoose = require("mongoose");
+const express = require('express');
+const mongoose = require('mongoose');
+const bodyParser = require('body-parser');
 const jwt = require('jsonwebtoken');
+const moment = require('moment');
 
 const connection = mongoose.connect(
   "mongodb+srv://Faisalpinitod:faisal@cluster0.y2f7t.mongodb.net/crashcourse-1?retryWrites=true&w=majority");
 
 const userSchema = new mongoose.Schema({
-  name: String,
-  email: String,
-  age: Number,
+    username: String,
+    email: String,
+    password: String,
+    createdAt: { type: Date, default: Date.now }
 });
+
+
 const User = mongoose.model("User", userSchema);
 
 const app = express();
@@ -96,6 +101,39 @@ app.delete('/api/users/:userId', authenticateJWT, (req, res) => {
 });
 
 
+app.get('/api/analytics', authenticateJWT, async (req, res) => {
+    try {
+        const pipeline = [
+            {
+                $group: {
+                    _id: {
+                        year: { $year: '$createdAt' },
+                        month: { $month: '$createdAt' }
+                    },
+                    count: { $sum: 1 }
+                }
+            },
+            {
+                $sort: {
+                    '_id.year': 1,
+                    '_id.month': 1
+                }
+            }
+        ];
+
+        const analyticsData = await User.aggregate(pipeline);
+        const formattedData = analyticsData.map(item => ({
+            month: moment({ year: item._id.year, month: item._id.month - 1 }).format('MMMM YYYY'),
+            count: item.count
+        }));
+
+        res.json(formattedData);
+    } catch (error) {
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+});
+
+
 
 // Start the server
 const PORT = process.env.PORT || 3000;
@@ -108,3 +146,5 @@ app.listen(PORT, async () => {
   }
   console.log(`Server is running on port ${PORT}`);
 });
+
+
