@@ -18,8 +18,13 @@
   },
   "homepage": "https://github.com/faisalpinitod/crashcourse-1#readme",
   "dependencies": {
+    "body-parser": "^1.20.2",
     "express": "^4.19.2",
+    "express-rate-limit": "^7.2.0",
+    "express-swagger-generator": "^1.1.17",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.3.1"
+    "memory-cache": "^0.2.0",
+    "moment": "^2.30.1",
+    "mongoose": "^8.3.2"
   }
 }

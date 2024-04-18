@@ -1,8 +1,10 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const bodyParser = require('body-parser');
 const jwt = require('jsonwebtoken');
 const moment = require('moment');
+const rateLimit = require('express-rate-limit');
+const expressSwagger = require('express-swagger-generator');
+const cache = require('memory-cache');
 
 const connection = mongoose.connect(
   "mongodb+srv://Faisalpinitod:faisal@cluster0.y2f7t.mongodb.net/crashcourse-1?retryWrites=true&w=majority");
@@ -43,7 +45,29 @@ const authenticateJWT = (req, res, next) => {
     });
 };
 
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100 // limit each IP to 100 requests per windowMs
+});
 
+app.use(limiter);
+
+
+const cacheMiddleware = (req, res, next) => {
+    const key = '__express__' + req.originalUrl || req.url;
+    const cachedBody = cache.get(key);
+    if (cachedBody) {
+        res.send(cachedBody);
+        return;
+    } else {
+        res.sendResponse = res.send;
+        res.send = (body) => {
+            cache.put(key, body);
+            res.sendResponse(body);
+        };
+        next();
+    }
+};
 
 
 // CRUD routes
@@ -132,6 +156,25 @@ app.get('/api/analytics', authenticateJWT, async (req, res) => {
         res.status(500).json({ message: 'Internal Server Error' });
     }
 });
+
+
+
+const options = {
+    swaggerDefinition: {
+        info: {
+            description: 'User API documentation',
+            title: 'User API',
+            version: '1.0.0'
+        },
+        host: `localhost:${PORT}`,
+        basePath: '/',
+        produces: ['application/json'],
+        schemes: ['http']
+    },
+    basedir: __dirname, // App absolute path
+    files: ['./inex.js'] // Path to the API handle folder
+};
+expressSwagger(options);
 
 
 
